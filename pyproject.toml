@@ -1,0 +1,62 @@
+[tool.poetry]
+name = "noetik"
+version = "0.1.0"
+description = "Modular AI Orchestration System"
+authors = ["Ioannis Karageorgos <ikarageo@aya.yale.edu>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/ecelab-org/noetik"
+repository = "https://github.com/ecelab-org/noetik"
+keywords = [
+    "AI",
+    "Agentic",
+    "orchestration",
+    "LLM",
+    "tools",
+    "memory",
+    "modular",
+    "system",
+]
+packages = [{ include = "noetik", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+rich = "^13.9.0"
+pydantic = "^2.11.0"
+pydantic-settings = "^2.9.0"
+fastapi = "^0.115.12"
+uvicorn = "^0.34.2"
+chromadb = "^0.4.24"
+
+# Add other dependencies as needed
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+black = "^23.12.1"
+ruff = "^0.0.292"
+mypy = "^1.15.0"
+pytest-cov = "^4.1.0"
+
+[tool.poetry.scripts]
+noetik = "noetik.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N"]
+
+[tool.mypy]
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

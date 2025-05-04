@@ -1,0 +1,17 @@
+services:
+  noetik:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python -m noetik.main --mode api --log-level INFO
+    ports:
+      - "${PORT:-8000}:8000"
+    # Allow interactive terminal
+    tty: true
+    stdin_open: true
