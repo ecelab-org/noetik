@@ -1,4 +1,4 @@
-"""Dispatches tool calls registered in `noetik.tools` and wraps errors."""
+"""Dispatches tool calls registered in ``noetik.tools`` and wraps errors."""
 
 import logging
 from typing import (

@@ -2,7 +2,7 @@
 Noetik entry point.
 
 This file keeps startup concerns (arg-parsing, env setup, logging) separate from the agent logic so
-`agent_loop.py` remains unit-testable.
+``agent_loop.py`` remains unit-testable.
 """
 
 import argparse
