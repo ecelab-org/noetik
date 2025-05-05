@@ -59,9 +59,3 @@ def register_tool(name: str) -> Callable:
 def echo_tool(text: str) -> str:
     """Echo the input text back to the caller."""
     return text
-
-
-@register_tool("add")
-def add_tool(a: int, b: int) -> int:
-    """Add two numbers together."""
-    return a + b
