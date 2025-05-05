@@ -1,9 +1,9 @@
 """
 Schema definitions for planner <-> agent <-> tool messages.
 
-These data models serve as the contract between the planner LLM, the
-orchestration loop, and individual tools.  We keep them separate from
-runtime logic so they can be imported anywhere without side-effects.
+These data models serve as the contract between the planner LLM, the orchestration loop, and
+individual tools.  We keep them separate from runtime logic so they can be imported anywhere without
+side-effects.
 """
 
 from typing import (

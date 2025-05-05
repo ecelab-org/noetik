@@ -5,8 +5,8 @@ This stub exposes two endpoints:
 - **GET /health**  - liveness probe for Docker / k8s.
 - **POST /agent**   - single-turn interaction: {"message": "..."}
 
-It shares the same planner and tool-execution path as the CLI and exposes a
-convenient ``run_api`` helper so the entry-point can import it directly.
+It shares the same planner and tool-execution path as the CLI and exposes a convenient ``run_api``
+helper so the entry-point can import it directly.
 """
 
 import logging

@@ -53,8 +53,8 @@ def fake_planner(user_msg: str) -> tuple[List[ToolCall], str | None]:
 def run_cli() -> None:
     """
     Run the main agent loop in CLI mode.
-    This is a simple REPL that takes user input, sends it to the planner,
-    executes any tool calls, and returns the final answer.
+    This is a simple REPL that takes user input, sends it to the planner, executes any tool calls,
+    and returns the final answer.
     """
     print("🔮  Noetik shell - type 'exit' to quit.")
     while True:

@@ -24,8 +24,8 @@ def execute_tool(name: str, args: Dict[str, Any] | None = None) -> Any:
     name:
         The registered tool name.
     args:
-        Keyword arguments to pass verbatim to the tool function.  If *None*,
-        an empty dict is assumed.
+        Keyword arguments to pass verbatim to the tool function.  If *None*, an empty dict is
+        assumed.
 
     Returns
     -------

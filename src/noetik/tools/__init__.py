@@ -1,5 +1,6 @@
 """
 Tool registry for Noetik.
+
 This module provides a decorator to register tools and a registry to look them up by name.
 The tools are functions that can be called with keyword arguments and return a value.
 """

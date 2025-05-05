@@ -39,8 +39,9 @@ def _init_logging(level: str) -> None:
 def main(argv: list[str] | None = None) -> None:  # noqa: WPS231 (acceptable complexity)
     """
     Main entry point for the Noetik application.
-    This function sets up the command-line interface, initializes logging,
-    and starts the application in either CLI or API mode.
+
+    This function sets up the command-line interface, initializes logging, and starts the
+    application in either CLI or API mode.
     """
     if argv is None:
         argv = sys.argv[1:]
