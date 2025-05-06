@@ -7,8 +7,7 @@ class Settings(BaseSettings):
     """Pydantic settings class for the application."""
 
     # Define the settings with default values and types
-    # These will be loaded from environment variables or a .env file
-    # if not provided
+    # These will be loaded from environment variables or a .env file if not provided
     SOME_API_KEY: str | None = None
     DATA_DIR: str = "/data"
     LOG_LEVEL: str = "INFO"
