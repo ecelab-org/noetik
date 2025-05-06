@@ -1,19 +1,22 @@
-FROM python:3.11-slim
+FROM python:3.11-slim as base
 
-# Update system packages to fix vulnerabilities
-RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install build dependencies
+RUN apt-get update && apt-get upgrade && apt-get install -y --no-install-recommends \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory in the container
+# Install poetry
+RUN pip install poetry
+
+# Set workdir and copy project files
 WORKDIR /app
+COPY pyproject.toml poetry.lock* README.md ./
 
-# Copy the rest of the application code into the container
-COPY . .
+# Install runtime dependencies
+RUN --mount=type=bind,source=.,target=/app \
+    poetry config virtualenvs.create false \
+    && poetry install --no-interaction
 
-# Install the package in editable mode
-RUN pip install -e .
-
-# Expose the port for API mode
 EXPOSE 8000
-
-# Command to run the main program
 CMD ["python", "-m", "noetik.main"]
