@@ -8,7 +8,9 @@ class Settings(BaseSettings):
 
     # Define the settings with default values and types
     # These will be loaded from environment variables or a .env file if not provided
-    SOME_API_KEY: str | None = None
+    PLANNER: str = "openai"
+    OPENAI_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: str | None = None
     DATA_DIR: str = "/data"
     LOG_LEVEL: str = "INFO"
 
