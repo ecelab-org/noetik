@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      - chroma
     volumes:
       - .:/app
     env_file:
@@ -15,3 +17,16 @@ services:
     # Allow interactive terminal
     tty: true
     stdin_open: true
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma-data:/data
+    environment:
+      - IS_PERSISTENT=TRUE
+      - CHROMA_SERVER_LOG_LEVEL=DEBUG
+
+volumes:
+  chroma-data:

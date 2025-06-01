@@ -26,12 +26,13 @@ rich = "^14.0.0"
 pydantic = "^2.11.4"
 pydantic-settings = "^2.9.1"
 uvicorn = "^0.34.2"
-openai = "^1.77.0"
-chromadb = "^1.0.7"
+openai = "^1.78.0"
+chromadb = "^1.0.8"
 
 # Add other dependencies as needed
 httpx = "^0.28.1"
 anthropic = "^0.50.0"
+sentence-transformers = "^4.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"

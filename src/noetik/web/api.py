@@ -24,11 +24,12 @@ from pydantic import (
     Field,
 )
 
-from noetik.agent.agent_loop import fake_planner  # reuse stub planner
+from noetik.agent.agent_loop import load_planner
 from noetik.agent.tool_executor import (
     ToolExecutionError,
     execute_tool,
 )
+from noetik.tools import TOOL_REGISTRY
 
 logger = logging.getLogger(__name__)
 app = FastAPI(title="Noetik API Stub", version="0.1.0")
@@ -67,7 +68,12 @@ async def agent_endpoint(req: MessageRequest) -> MessageResponse:  # noqa: D401
     For now, mirrors the CLI design (single planner call + optional tool call).
     """
 
-    tool_calls, direct_answer = fake_planner(req.message)
+    # Load the planner
+    planner = load_planner()
+
+    tool_calls, direct_answer = planner.plan(
+        user_msg=req.message, available_tools=list(TOOL_REGISTRY.keys())
+    )
     tool_results: dict[str, Any] = {}
 
     for call in tool_calls:
@@ -84,8 +90,6 @@ async def agent_endpoint(req: MessageRequest) -> MessageResponse:  # noqa: D401
 # ---------------------------------------------------------------------------
 # Public helper to launch the API (imported by main.py)
 # ---------------------------------------------------------------------------
-
-
 def run_api(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
     """Start a uvicorn server hosting *app*.
 

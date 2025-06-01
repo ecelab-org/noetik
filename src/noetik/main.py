@@ -20,8 +20,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
 def _init_logging(level: str) -> None:
     numeric = getattr(logging, level.upper(), logging.INFO)
     logging.basicConfig(
@@ -29,13 +27,13 @@ def _init_logging(level: str) -> None:
         format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
         stream=sys.stdout,
     )
+    # Reduce chromadb log level to WARNING or ERROR
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-
-
 def main(argv: list[str] | None = None) -> None:  # noqa: WPS231 (acceptable complexity)
     """
     Main entry point for the Noetik application.
