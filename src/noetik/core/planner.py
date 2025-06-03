@@ -27,7 +27,6 @@ from typing import (
     Dict,
     List,
     Mapping,
-    Sequence,
     Tuple,
     Type,
 )
@@ -39,8 +38,8 @@ from pydantic import (
     ValidationError,
 )
 
-from noetik.agent.schema import ToolCall
 from noetik.config import settings
+from noetik.core.schema import ToolCall
 from noetik.tools import (
     ToolSchema,
     get_tool_schemas,
@@ -139,7 +138,40 @@ Only one object, no extra text.
     def _parse_response(self, content: str) -> Tuple[List[ToolCall], str | None]:
         """Parse and validate the LLM response using Pydantic."""
         try:
-            parsed = PlannerResponse.model_validate_json(content)
+            # First try to sanitize and parse the content
+            cleaned_content = _sanitize_json_string(content)
+
+            try:
+                # Use json.loads to parse the JSON
+                raw_json = json.loads(cleaned_content)
+
+                # Handle different formats
+                if "tool" in raw_json:
+                    # Convert from {"tool": "name", "args": {}} to expected format
+                    tool_data = {
+                        "tool_calls": [
+                            {"name": raw_json["tool"], "args": raw_json.get("args", {})}
+                        ],
+                        "answer": None,
+                    }
+                    # Use json.dumps to properly encode any problematic strings
+                    properly_encoded = json.dumps(tool_data)
+                    parsed = PlannerResponse.model_validate_json(properly_encoded)
+                elif "answer" in raw_json:
+                    # Use json.dumps to properly encode the answer string
+                    answer_data = {"tool_calls": [], "answer": raw_json["answer"]}
+                    properly_encoded = json.dumps(answer_data)
+                    parsed = PlannerResponse.model_validate_json(properly_encoded)
+                else:
+                    # Try original format with proper encoding
+                    properly_encoded = json.dumps(raw_json)
+                    parsed = PlannerResponse.model_validate_json(properly_encoded)
+
+            except (json.JSONDecodeError, ValidationError):
+                # If we can't parse as JSON, treat the whole response as an answer
+                answer_data = {"tool_calls": [], "answer": content}
+                properly_encoded = json.dumps(answer_data)
+                parsed = PlannerResponse.model_validate_json(properly_encoded)
 
             if parsed.tool_calls:
                 calls = []
@@ -149,7 +181,7 @@ Only one object, no extra text.
                 return calls, None
             return [], parsed.answer
 
-        except ValidationError as e:
+        except Exception as e:  # pylint: disable=broad-except
             logger.error("Failed to parse LLM response: %s", e)
             return [], f"Error parsing LLM response: {content}"
 
@@ -240,10 +272,16 @@ def _sanitize_json_string(content: str) -> str:
         if match:
             content = match.group(1).strip()
 
-    # Remove control characters except whitespace
-    content = "".join(ch for ch in content if ch >= " " or ch in "\n\r\t")
+    # Replace semicolons with commas if they appear to be used as separators
+    content = re.sub(r';\s*(["{[])', r",\1", content)
 
-    # Try to find the JSON object boundaries
+    # Remove trailing semicolons
+    content = re.sub(r";\s*$", "", content, flags=re.MULTILINE)
+
+    # Remove semicolons before closing braces
+    content = re.sub(r";\s*([\]}])", r"\1", content)
+
+    # Find the JSON object boundaries
     try:
         # Find the outermost matching braces
         open_idx = content.find("{")
@@ -260,8 +298,7 @@ def _sanitize_json_string(content: str) -> str:
                         content = content[open_idx : i + 1]
                         break
     except Exception:  # pylint: disable=broad-except
-        logger.error("Failed to sanitize JSON string: %s", content)
-        # If this approach fails, we'll try regular parsing
+        logger.warning("JSON boundary detection failed")
 
     return content
 
@@ -295,37 +332,8 @@ class AnthropicPlanner(BasePlanner):
                 content = str(response.content[0])
 
             logger.debug("Anthropic planner response: %s", content)
-
-            try:
-                # Clean up the JSON string first
-                cleaned_content = _sanitize_json_string(content)
-
-                transformed_content: Mapping[str, Sequence[Mapping[str, Any]] | str | None] = {}
-                parsed_content = json.loads(cleaned_content)
-                if "tool" in parsed_content:
-                    # Transform to expected format
-                    transformed_content = {
-                        "tool_calls": [
-                            {"name": parsed_content["tool"], "args": parsed_content.get("args", {})}
-                        ],
-                        "answer": None,
-                    }
-                    content = json.dumps(transformed_content)
-                elif "answer" in parsed_content:
-                    # Already in the right format, just ensure tool_calls exists
-                    transformed_content = {"tool_calls": [], "answer": parsed_content["answer"]}
-                    content = json.dumps(transformed_content)
-                else:
-                    # Fallback: treat as direct answer if parsing worked but format is unexpected
-                    transformed_content = {"tool_calls": [], "answer": cleaned_content}
-                    content = json.dumps(transformed_content)
-            except json.JSONDecodeError as e:
-                logger.error("Failed to parse Anthropic response as JSON: %s", str(e))
-                # Fallback: treat the entire response as a direct answer
-                transformed_content = {"tool_calls": [], "answer": content}
-                content = json.dumps(transformed_content)
-
             return self._parse_response(content)
+
         except ImportError:
             logger.error("Anthropic SDK not installed")
             return [], "Error: Anthropic SDK not installed. Run 'pip install anthropic'"

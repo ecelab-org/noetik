@@ -31,7 +31,7 @@ class VectorMemory:
         self,
         collection_name: str = "noetik",
         persist: bool = True,
-        host: str = "chroma",  # service name in docker‑compose
+        host: str = "localhost",
         port: int = 8000,
     ):
         self._client = chromadb.HttpClient(host=host, port=port)
@@ -61,6 +61,21 @@ class VectorMemory:
     # ------------------------------------------------------------------ #
     # Public API
     # ------------------------------------------------------------------ #
+    def init(self) -> None:
+        """Initialize the vector memory connection."""
+        # This is a no-op since the client is already initialized in __init__
+        logger.info("Vector memory initialized with collection '%s'", self._col.name)
+
+    def reset(self) -> None:
+        """Reset the vector memory by deleting the collection."""
+        try:
+            self._client.delete_collection(self._col.name)
+            logger.info("Vector memory collection '%s' deleted", self._col.name)
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error(
+                "Failed to delete vector memory collection '%s': %s", self._col.name, str(e)
+            )
+
     def add(self, doc_id: str, text: str, metadata: dict | None = None) -> None:
         """Add or upsert a single document."""
         self._col.upsert(

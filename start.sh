@@ -21,7 +21,7 @@ while [[ "$#" -gt 0 ]]; do
             echo "Usage: ./start.sh [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --mode, -m MODE    Run in 'cli' or 'api' mode (default: api)"
+            echo "  --mode, -m MODE    Run in 'cli', 'api', or 'web' mode (default: api)"
             echo "  --help, -h         Show this help message"
             exit 0
             ;;
@@ -31,8 +31,8 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Validate mode
-if [[ "$MODE" != "cli" && "$MODE" != "api" ]]; then
-    echo -e "${RED}Error: Invalid mode '$MODE'. Use 'cli' or 'api'.${NC}"
+if [[ "$MODE" != "cli" && "$MODE" != "api" && "$MODE" != "web" ]]; then
+    echo -e "${RED}Error: Invalid mode '$MODE'. Use 'cli', 'api', or 'web'.${NC}"
     exit 1
 fi
 
@@ -101,7 +101,7 @@ if [ $REBUILD -eq 1 ]; then
 fi
 
 # Run the container with the selected mode
-docker compose run --service-ports --rm noetik python -m noetik.main --mode $MODE --log-level info
+docker compose run --service-ports --rm noetik python -m noetik.main --mode $MODE --log-level warning
 
 # This part will execute when docker-compose is terminated
 echo -e "${GREEN}Noetik container stopped.${NC}"

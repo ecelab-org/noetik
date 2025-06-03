@@ -17,6 +17,7 @@
 - **Memory integration**: Chroma/Weaviate/JSON-based memory for stateful reasoning.
 - **Multi-turn agent loop**: Reflect, act, and reason across multiple steps.
 - **Pluggable components**: Swap planners, tools, memory, or executors with minimal friction.
+- **Client-server architecture**: Core logic in API with multiple frontends (CLI, Web UI).
 
 ---
 
@@ -26,41 +27,35 @@
 noetik/                               # Root project directory
 ├── src/                              # Source code root
 │   └── noetik/                       # Main package directory
-│       ├── agent/                    # Agent orchestration and reasoning
-│       │   ├── __init__.py            # Package initializer for agent module
-│       │   ├── agent_loop.py          # Main orchestration loop
-│       │   ├── planner_interface.py   # Interface between loop and LLM
+│       ├── api/                      # Core API backend
+│       │   ├── __init__.py            # Package initializer
+│       │   ├── app.py                 # FastAPI implementation and business logic
+│       │   └── models.py              # Pydantic models for API requests/responses
+│       │
+│       ├── client/                   # Frontend clients
+│       │   ├── __init__.py            # Package initializer
+│       │   ├── cli.py                 # Command-line interface client
+│       │   └── webapp.py              # Web UI client interface
+│       │
+│       ├── core/                     # Core agent components
+│       │   ├── __init__.py            # Package initializer
+│       │   ├── planner.py             # Interface with LLMs for planning
 │       │   ├── schema.py              # Tool call + planner schemas
 │       │   └── tool_executor.py       # Tool dispatch logic
 │       │
-│       ├── examples/                 # Example implementations and demos
-│       │   ├── __init__.py            # Package initializer for examples
-│       │   └── run_demo_agent.py      # Quickstart agent demo
-│       │
 │       ├── memory/                   # Memory and storage capabilities
-│       │   ├── __init__.py            # Package initializer for memory module
-│       │   ├── memory_store.py        # JSON/SQLite local memory
+│       │   ├── __init__.py            # Package initializer
+│       │   ├── memory_store.py        # Saving and retrieving agent turns
 │       │   └── vector_memory.py       # Embedding and vector DB interface
 │       │
 │       ├── tools/                    # Tool definitions and implementations
 │       │   ├── __init__.py            # Tool registry + decorators
-│       │   ├── code_tools.py          # Code execution
-│       │   ├── shell_tools.py         # Shell command tools
-│       │   └── web_tools.py           # Search, summarization
-│       │
-│       ├── web/                      # Web API and server components
-│       │   ├── __init__.py            # Package initializer for web module
-│       │   └── api.py                 # FastAPI implementation for HTTP endpoints
-│       │
-│       ├── llm/                      # Language model integration
-│       │   ├── __init__.py            # Package initializer for LLM module
-│       │   ├── model_loader.py        # Adapter to vLLM, OpenAI, Anthropic, etc.
-│       │   ├── planner.py             # LLM planning logic
-│       │   └── responder.py           # User-facing message generation
+│       │   └── [additional tool files] # Various tool implementations
 │       │
 │       ├── __init__.py                # Package initializer for noetik
+│       ├── common.py                  # Common utilities (ANSI colors, etc.)
 │       ├── config.py                  # Centralized settings and environment vars
-│       └── main.py                    # Entry point: CLI or API
+│       └── main.py                    # Entry point: CLI, API, or Web UI
 │
 ├── tests/                            # Test suite
 │   └── test_tool_executor.py          # Tests for tool execution system
@@ -88,10 +83,10 @@ noetik/                               # Root project directory
 - Python 3.11+
 - pip package manager
 - Required Python packages (installed via Poetry):
-  - LLM libraries (depending on provider choice)
-  - Vector database clients
-  - Web frameworks
-  - Utility libraries
+  - LLM libraries (OpenAI, Anthropic)
+  - Vector database clients (ChromaDB)
+  - Web frameworks (FastAPI, Uvicorn)
+  - Utility libraries (Pydantic, HTTPX)
 
 The Docker setup automatically configures the correct Python version and all dependencies in an isolated environment, which is why it's the recommended approach.
 
@@ -112,6 +107,9 @@ $ ./start.sh
 # Or run in CLI mode
 $ ./start.sh --mode cli
 
+# Or run in Web UI mode
+$ ./start.sh --mode web
+
 # For help with options
 $ ./start.sh --help
 ```
@@ -120,7 +118,7 @@ The `start.sh` script will:
 - Check for Docker and Docker Compose
 - Create a `.env` file from the template if needed
 - Build the container only when dependencies change (faster restarts)
-- Start the container in the selected mode (api or cli)
+- Start the container in the selected mode (api, cli, or web)
 
 ### Option 2: Manual Setup
 
@@ -147,13 +145,16 @@ cp .env.template .env
 ```
 
 Key variables include:
-- `PORT`: The port to expose the API (default: 8000)
-- `LLM_PROVIDER`: Your LLM provider (openai, anthropic, local)
+- `API_PORT`: The port for the API backend (default: 8000)
+- `WEBUI_PORT`: The port for the Web UI (default: 8080)
+- `PLANNER`: Your LLM provider (openai, anthropic, tgi)
 - `*_API_KEY`: API keys for various services
 
 ---
 
 ## 🖥️ Usage
+
+Noetik follows a client-server architecture, where the API serves as the backend and both CLI and Web UI are clients. All core functionality is implemented in the API, ensuring consistent behavior across interfaces.
 
 ### CLI Mode
 
@@ -169,11 +170,28 @@ python -m noetik.main --mode cli
 
 **Example interaction:**
 ```
-you> Tell me about the weather
-noetik> What location would you like weather information for?
-you> New York
-noetik> (fetching weather data...)
+🔮  Noetik shell - type 'exit' to quit.
+
+🧑 You: Tell me about the weather
+🤖 What location would you like weather information for?
+
+🧑 You: New York
+🤖 (fetching weather data...)
 ```
+
+### Web UI Mode
+
+**Using Docker:**
+```bash
+./start.sh --mode web
+```
+
+**Using Python directly:**
+```bash
+python -m noetik.main --mode web
+```
+
+This starts a web interface accessible at http://localhost:8080 (or the port specified in your .env file).
 
 ### API Mode
 
@@ -194,11 +212,16 @@ Health check:
 curl http://localhost:8000/health
 ```
 
+Create a session:
+```bash
+curl -X POST http://localhost:8000/sessions
+```
+
 Send a message:
 ```bash
 curl -X POST http://localhost:8000/agent \
   -H "Content-Type: application/json" \
-  -d '{"message": "What is the capital of France?"}'
+  -d '{"message": "What is the capital of France?", "session_id": "your-session-id"}'
 ```
 
 ---
@@ -212,9 +235,10 @@ Noetik is about reasoning. Not just answering questions, but understanding conte
 
 ## ❓ Troubleshooting
 
-- **Port already in use**: Change the PORT value in your .env file
+- **Port already in use**: Change the API_PORT or WEBUI_PORT values in your .env file
 - **Connection refused**: Ensure the container is running properly with `docker ps`
 - **Environment variables not working**: Check that your .env file is in the project root
+- **API not responding**: When using CLI or Web UI, ensure the API has fully started
 
 ---
 

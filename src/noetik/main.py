@@ -1,8 +1,8 @@
 """
 Noetik entry point.
 
-This file keeps startup concerns (arg-parsing, env setup, logging) separate from the agent logic so
-``agent_loop.py`` remains unit-testable.
+This file handles startup concerns (arg-parsing, env setup, logging) and launches the appropriate
+interface (API, CLI, or Web UI).
 """
 
 import argparse
@@ -11,7 +11,7 @@ import os
 import sys
 from pathlib import Path
 
-from noetik.agent.agent_loop import run_cli
+from noetik.api.app import run_api
 from noetik.config import settings
 
 logger = logging.getLogger(__name__)
@@ -34,12 +34,12 @@ def _init_logging(level: str) -> None:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def main(argv: list[str] | None = None) -> None:  # noqa: WPS231 (acceptable complexity)
+def main(argv: list[str] | None = None) -> None:
     """
     Main entry point for the Noetik application.
 
     This function sets up the command-line interface, initializes logging, and starts the
-    application in either CLI or API mode.
+    application in either CLI, API, or web mode.
     """
     if argv is None:
         argv = sys.argv[1:]
@@ -55,9 +55,9 @@ def main(argv: list[str] | None = None) -> None:  # noqa: WPS231 (acceptable com
     parser = argparse.ArgumentParser(description="Run Noetik AI orchestrator")
     parser.add_argument(
         "--mode",
-        choices=["cli", "api"],
+        choices=["cli", "api", "web"],
         default="cli",
-        help="Launch interactive CLI or REST API stub (default: cli)",
+        help="Launch interactive CLI, REST API, or web interface (default: cli)",
     )
     parser.add_argument(
         "--log-level",
@@ -71,15 +71,46 @@ def main(argv: list[str] | None = None) -> None:  # noqa: WPS231 (acceptable com
     logger.info("Starting Noetik [%s mode]", args.mode)
     logger.debug("Settings: %s", settings.model_dump())
 
-    if args.mode == "cli":
-        run_cli()
-    elif args.mode == "api":
-        # Lazy import to avoid uvicorn dep if not needed
-        from noetik.web.api import run_api  # pylint: disable=import-outside-toplevel
+    if args.mode == "api":
+        # Run only the API server
+        run_api(host="0.0.0.0", port=settings.API_PORT, reload=settings.DEBUG)
 
-        run_api()
     else:
-        parser.error(f"Unknown mode: {args.mode}")
+        # Run both API and either CLI or web UI
+        if args.mode not in ["cli", "web"]:
+            parser.error(f"Unknown mode: {args.mode}")
+
+        # Lazy import to avoid web dependencies if not needed
+        import threading  # pylint: disable=import-outside-toplevel
+
+        # Start API server in a separate thread
+        api_thread = threading.Thread(
+            target=run_api,
+            kwargs={
+                "host": "0.0.0.0",
+                "port": settings.API_PORT,
+                "reload": False,  # Reload doesn't work well with threading
+            },
+            daemon=True,
+        )
+        api_thread.start()
+
+        if args.mode == "cli":
+            # Lazy import to avoid CLI dependencies if not needed
+            from noetik.client.cli import (  # pylint: disable=import-outside-toplevel
+                run_cli,
+            )
+
+            # Run CLI in main thread
+            run_cli()
+        elif args.mode == "web":
+            # Lazy import to avoid web dependencies if not needed
+            from noetik.client.webapp import (  # pylint: disable=import-outside-toplevel
+                run_webapp,
+            )
+
+            # Run web UI in main thread
+            run_webapp(reload=settings.DEBUG)
 
 
 if __name__ == "__main__":

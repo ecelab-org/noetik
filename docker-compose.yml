@@ -7,26 +7,30 @@ services:
       - chroma
     volumes:
       - .:/app
+      - cached-models:/root/.cache
     env_file:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
-    command: python -m noetik.main --mode api --log-level INFO
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+      - HF_HOME=/root/.cache/huggingface
+      - SENTENCE_TRANSFORMERS_HOME=/root/.cache/huggingface
+    command: python -m noetik.main --mode api --log-level warning
     ports:
-      - "${PORT:-8000}:8000"
+      - "${API_PORT:-8000}:8000"
+      - "${WEBUI_PORT:-8080}:8080"
     # Allow interactive terminal
     tty: true
     stdin_open: true
 
   chroma:
     image: chromadb/chroma:latest
-    ports:
-      - "8001:8000"
     volumes:
       - chroma-data:/data
     environment:
       - IS_PERSISTENT=TRUE
-      - CHROMA_SERVER_LOG_LEVEL=DEBUG
+      - CHROMA_SERVER_LOG_LEVEL=WARNING
 
 volumes:
   chroma-data:
+  cached-models:

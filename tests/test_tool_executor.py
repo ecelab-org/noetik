@@ -5,7 +5,7 @@ Run with:
 $ pytest -q
 """
 
-from noetik.agent.tool_executor import (
+from noetik.core.tool_executor import (
     ToolExecutionError,
     execute_tool,
 )

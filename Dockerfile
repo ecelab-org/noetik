@@ -18,5 +18,5 @@ RUN --mount=type=bind,source=.,target=/app \
     poetry config virtualenvs.create false \
     && poetry install --no-interaction
 
-EXPOSE 8000
+EXPOSE 8000 8080
 CMD ["python", "-m", "noetik.main"]

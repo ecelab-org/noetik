@@ -25,4 +25,4 @@ def colored_print(text: str, color: AnsiColors, *args: Any, **kwargs: Any) -> No
         args: Additional positional arguments for print
         kwargs: Additional keyword arguments for print
     """
-    print(f"{color}{text}\033[0m", *args, **kwargs)  # ANSI reset at the end
+    print(f"{color.value}{text}\033[0m", *args, **kwargs)  # ANSI reset at the end
