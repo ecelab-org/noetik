@@ -12,7 +12,6 @@ services:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
-      - TRANSFORMERS_CACHE=/root/.cache/huggingface
       - HF_HOME=/root/.cache/huggingface
       - SENTENCE_TRANSFORMERS_HOME=/root/.cache/huggingface
     command: python -m noetik.main --mode api --log-level warning
