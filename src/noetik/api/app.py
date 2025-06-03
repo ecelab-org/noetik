@@ -11,10 +11,8 @@ It exposes the following endpoints:
 
 import logging
 import uuid
-from contextlib import asynccontextmanager
 from typing import (
     Any,
-    AsyncIterator,
     Dict,
     List,
     Optional,
@@ -50,21 +48,7 @@ sessions: Dict[str, List[str]] = {}
 # Initialize vector memory
 retriever = VectorMemory(host=settings.VECTOR_DB_HOST, port=settings.VECTOR_DB_PORT)
 
-
-# Initialize memory store at startup
-@asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Initialize the memory store and vector DB connection."""
-    # Startup code
-    logger.info("Starting Noetik API...")
-    retriever.init()
-    logger.info("Vector memory initialized successfully.")
-    yield
-    # Shutdown code (if needed)
-    logger.info("Shutting down Noetik API...")
-
-
-app = FastAPI(title="Noetik API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Noetik API", version="0.1.0", description="Noetik AI orchestrator API")
 
 # Add CORS middleware to allow requests from the web UI
 app.add_middleware(
@@ -139,9 +123,6 @@ async def agent_endpoint(req: MessageRequest) -> MessageResponse:
     context_block = "\n\n" + "\n\n".join(prompt_parts) + "\n\n" if prompt_parts else ""
     prompt_input = f"{context_block}CURRENT QUERY:\n{req.message}" if prompt_parts else req.message
 
-    for part in prompt_parts:
-        print(f"Context part:\n{part}\n")
-
     # Load the planner and process the request
     planner = load_planner()
     tool_calls, direct_answer = planner.plan(
@@ -195,7 +176,9 @@ async def get_docs() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # Public helper to launch the API (imported by main.py)
 # ---------------------------------------------------------------------------
-def run_api(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
+def run_api(
+    host: str = "0.0.0.0", port: int = 8000, reload: bool = False, log_level: str | None = None
+) -> None:
     """Start a uvicorn server hosting *app*.
 
     Parameters
@@ -204,17 +187,37 @@ def run_api(host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> No
         Bind address for the HTTP server.
     reload:
         If *True*, enable auto-reload (useful in dev docker-compose).
+    log_level:
+        Logging level to use (default from settings if not provided).
+    Raises
     """
 
     # Lazy import - keeps uvicorn an optional dependency at pkg‑import time
     import uvicorn  # pylint: disable=import-outside-toplevel
 
+    if log_level is None:  # Use the default from settings if not provided
+        log_level = settings.LOG_LEVEL
+
+    logger.info(
+        "Starting Noetik API at %s:%d (reload=%s, log_level=%s)", host, port, reload, log_level
+    )
+
+    try:
+        # Ensure the vector memory is initialized
+        retriever.init()
+        logger.info("Vector memory initialized successfully.")
+    except Exception as exc:
+        logger.error("Failed to initialize vector memory: %s", exc)
+        raise RuntimeError("Failed to initialize vector memory") from exc
+
+    # Start the API server
+    logger.debug("API settings: %s", settings.model_dump())  # Log settings for debugging
     uvicorn.run(
         "noetik.api.app:app",
         host=host,
         port=port,
         reload=reload,
-        log_level=settings.LOG_LEVEL,
+        log_level=log_level,
     )
 
 
