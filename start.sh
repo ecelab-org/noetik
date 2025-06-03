@@ -101,7 +101,7 @@ if [ $REBUILD -eq 1 ]; then
 fi
 
 # Run the container with the selected mode
-docker compose run --service-ports --rm noetik python -m noetik.main --mode $MODE --log-level warning
+docker compose run --service-ports --rm noetik python -m noetik.main --mode $MODE
 
 # This part will execute when docker-compose is terminated
 echo -e "${GREEN}Noetik container stopped.${NC}"
