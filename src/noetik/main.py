@@ -55,18 +55,24 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run Noetik AI orchestrator")
     parser.add_argument(
         "--mode",
-        choices=["cli", "api", "web"],
-        default="cli",
-        help="Launch interactive CLI, REST API, or web interface (default: cli)",
+        choices=["api", "cli", "web"],
+        type=str.lower,
+        default="api",
+        help="Launch interactive REST API, CLI, or web interface (default: api)",
     )
     parser.add_argument(
         "--log-level",
+        choices=["debug", "info", "warning", "error", "critical"],
+        type=str.lower,
         default=settings.LOG_LEVEL,
         help="Logging level (default from env: %(default)s)",
     )
     args = parser.parse_args(argv)
 
-    _init_logging(args.log_level)
+    # Override log level setting with command-line argument
+    settings.LOG_LEVEL = args.log_level
+
+    _init_logging(settings.LOG_LEVEL)
 
     logger.info("Starting Noetik [%s mode]", args.mode)
     logger.debug("Settings: %s", settings.model_dump())
@@ -90,6 +96,7 @@ def main(argv: list[str] | None = None) -> None:
                 "host": "0.0.0.0",
                 "port": settings.API_PORT,
                 "reload": False,  # Reload doesn't work well with threading
+                "log_level": "warning",
             },
             daemon=True,
         )
