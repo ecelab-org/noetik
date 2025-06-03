@@ -170,7 +170,9 @@ def create_index_html(path: Path) -> bool:
 
 
 # Create a FastAPI app for the web UI
-webapp = FastAPI(title="Noetik Web UI", version="0.1.0")
+webapp = FastAPI(
+    title="Noetik Web UI", version="0.1.0", description="Noetik AI orchestrator web interface"
+)
 
 # Set up templates directory - assuming we'll create this structure
 templates_dir = Path(settings.DATA_DIR) / "webui/templates"
@@ -194,15 +196,34 @@ async def read_root(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-def run_webapp(host: str = "0.0.0.0", port: int = 8080, reload: bool = False) -> None:
+def run_webapp(
+    host: str = "0.0.0.0", port: int = 8080, reload: bool = False, log_level: str | None = None
+) -> None:
     """Run the web UI server."""
     import uvicorn  # pylint: disable=import-outside-toplevel
 
-    uvicorn.run("noetik.client.webapp:webapp", host=host, port=port, reload=reload)
+    if log_level is None:  # Use the default from settings if not provided
+        log_level = settings.LOG_LEVEL
+
+    colored_print(
+        "Web UI is running at http://localhost:8080. Visit this URL in your browser.",
+        AnsiColors.GREEN,
+    )
+    colored_print(
+        "Press Ctrl+C to stop the server.",
+        AnsiColors.YELLOW,
+    )
+    uvicorn.run(
+        "noetik.client.webapp:webapp",
+        host=host,
+        port=port,
+        reload=reload,
+        log_level=log_level,
+    )
 
 
 if __name__ == "__main__":
-    run_webapp(reload=True)
+    run_webapp(reload=False)
     colored_print(
         "Web UI is running at http://localhost:8080. Visit this URL in your browser.",
         AnsiColors.GREEN,
