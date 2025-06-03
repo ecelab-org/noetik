@@ -29,6 +29,10 @@ from noetik.api.models import (
     MessageResponse,
     SessionResponse,
 )
+from noetik.common import (
+    AnsiColors,
+    colored_print,
+)
 from noetik.config import settings
 from noetik.core.planner import load_planner
 from noetik.core.schema import AgentTurn
@@ -123,6 +127,9 @@ async def agent_endpoint(req: MessageRequest) -> MessageResponse:
     context_block = "\n\n" + "\n\n".join(prompt_parts) + "\n\n" if prompt_parts else ""
     prompt_input = f"{context_block}CURRENT QUERY:\n{req.message}" if prompt_parts else req.message
 
+    # Log the prompt input for debugging
+    logger.debug("Prompt input for planning:\n%s", prompt_input)
+
     # Load the planner and process the request
     planner = load_planner()
     tool_calls, direct_answer = planner.plan(
@@ -212,6 +219,15 @@ def run_api(
 
     # Start the API server
     logger.debug("API settings: %s", settings.model_dump())  # Log settings for debugging
+
+    colored_print(
+        "🔮 Noetik API is running at http://localhost:8000.",
+        AnsiColors.GREEN,
+    )
+    colored_print(
+        "Visit http://localhost:8000/docs for API documentation.",
+        AnsiColors.BLUE,
+    )
     uvicorn.run(
         "noetik.api.app:app",
         host=host,

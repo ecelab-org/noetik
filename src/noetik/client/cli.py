@@ -65,7 +65,7 @@ def call_api(endpoint: str, data: Dict[str, Any], max_retries: int = 5) -> Dict[
                     attempt + 1,
                     max_retries,
                 )
-                import time
+                import time  # pylint: disable=import-outside-toplevel
 
                 time.sleep(retry_delay)
                 continue
@@ -90,8 +90,6 @@ def call_api(endpoint: str, data: Dict[str, Any], max_retries: int = 5) -> Dict[
 
 def run_cli() -> None:
     """Run the CLI client that communicates with the API."""
-    colored_print("🔮  Noetik shell - type 'exit' to quit.", AnsiColors.YELLOW)
-
     # Create a new session
     session_response = call_api("/sessions", {})
     session_id = session_response.get("session_id")
@@ -100,6 +98,7 @@ def run_cli() -> None:
         colored_print("⚠️ Failed to create a session", AnsiColors.RED)
         return
 
+    colored_print("\n🔮 Noetik shell - type 'exit' or 'quit' (or Ctrl+C) to exit", AnsiColors.GREEN)
     while True:
         colored_print("\n🧑 You: ", AnsiColors.BLUE, end="")
         user_msg, ok = get_user_message()

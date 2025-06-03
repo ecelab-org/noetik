@@ -206,7 +206,7 @@ def run_webapp(
         log_level = settings.LOG_LEVEL
 
     colored_print(
-        "Web UI is running at http://localhost:8080. Visit this URL in your browser.",
+        "\nWeb UI is running at http://localhost:8080. Visit this URL in your browser.",
         AnsiColors.GREEN,
     )
     colored_print(
@@ -225,7 +225,7 @@ def run_webapp(
 if __name__ == "__main__":
     run_webapp(reload=False)
     colored_print(
-        "Web UI is running at http://localhost:8080. Visit this URL in your browser.",
+        "\nWeb UI is running at http://localhost:8080. Visit this URL in your browser.",
         AnsiColors.GREEN,
     )
     colored_print(
