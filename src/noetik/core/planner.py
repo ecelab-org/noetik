@@ -150,7 +150,7 @@ Only one object, no extra text.
                 parsed = PlannerResponse.model_validate(answer_data)
             elif re.match(r'\{\s*(["\'])tool\1\s*:', s):
                 try:
-                    # Attempt to parse as a loose dict with "tool" key
+                    # Attempt to parse the response as a tool call
                     d: Mapping = parse_tool_call(s)
                 except ToolCallParseError as e:
                     err = f"Failed to parse tool use response: {s}"
