@@ -53,18 +53,11 @@ def _read_quoted(s: str, i: int) -> Tuple[str, int]:
         raise ToolCallParseError(f"expected quote at pos {i}")
     i += 1
     out: List[str] = []
-    esc = False
     while i < len(s):
         ch = s[i]
-        if esc:
-            out.append(ch)
-            esc = False
-        elif ch == "\\":
-            esc = True
-        elif ch == quote:
+        if ch == quote:
             return "".join(out), i + 1
-        else:
-            out.append(ch)
+        out.append(ch)
         i += 1
     raise ToolCallParseError("unterminated string literal")
 
@@ -104,7 +97,10 @@ def _read_value(s: str, i: int) -> Tuple[str, int]:
         raise ToolCallParseError("unexpected end of input while reading value")
 
     if s[i] in _QUOTE_SET:
-        return _read_quoted(s, i)
+        val, i = _read_quoted(s, i)
+        # Interpret escape sequences in quoted strings
+        val = val.encode("utf-8").decode("unicode_escape")
+        return val, i
     elif s[i] == "{":
         j = _find_matching_brace(s, i)
         return s[i:j], j  # keep nested dict as raw text
