@@ -13,7 +13,6 @@ Additional providers can be added by subclassing :class:`BasePlanner` and regist
 :func:`register_planner`.
 """
 
-import json
 import logging
 import re
 from abc import (
@@ -35,7 +34,6 @@ import httpx
 from pydantic import (
     BaseModel,
     Field,
-    ValidationError,
 )
 
 from noetik.config import settings
@@ -43,6 +41,10 @@ from noetik.core.schema import ToolCall
 from noetik.tools import (
     ToolSchema,
     get_tool_schemas,
+)
+from noetik.tools.tool_call_parser import (
+    ToolCallParseError,
+    parse_tool_call,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,14 +99,15 @@ class BasePlanner(ABC):
     """Abstract planner that converts user context -> tool calls / answer."""
 
     # Common system prompt for all planners
+    llm_answer_prefix = "Answer:"
     SYSTEM_PROMPT: ClassVar[
         str
-    ] = """\
+    ] = f"""\
 You are Noetik, an autonomous AI assistant that can THINK and ACT.
-When you need to use a tool, respond with JSON like:
-{"tool": "<name>", "args": { ... }}
+When you need to use a tool, respond with a strict Python Dict object as:
+{{"tool": "<name>", "args": {{ ... }}}}
 If no tool is needed, respond with:
-{"answer": "<final reply to user>"}
+{llm_answer_prefix} <final reply to user>
 Only one object, no extra text.
 """
 
@@ -137,41 +140,37 @@ Only one object, no extra text.
 
     def _parse_response(self, content: str) -> Tuple[List[ToolCall], str | None]:
         """Parse and validate the LLM response using Pydantic."""
+
+        prefix = self.llm_answer_prefix
+
+        s = content.strip()
         try:
-            # First try to sanitize and parse the content
-            cleaned_content = _sanitize_json_string(content)
-
-            try:
-                # Use json.loads to parse the JSON
-                raw_json = json.loads(cleaned_content)
-
-                # Handle different formats
-                if "tool" in raw_json:
-                    # Convert from {"tool": "name", "args": {}} to expected format
-                    tool_data = {
-                        "tool_calls": [
-                            {"name": raw_json["tool"], "args": raw_json.get("args", {})}
-                        ],
-                        "answer": None,
-                    }
-                    # Use json.dumps to properly encode any problematic strings
-                    properly_encoded = json.dumps(tool_data)
-                    parsed = PlannerResponse.model_validate_json(properly_encoded)
-                elif "answer" in raw_json:
-                    # Use json.dumps to properly encode the answer string
-                    answer_data = {"tool_calls": [], "answer": raw_json["answer"]}
-                    properly_encoded = json.dumps(answer_data)
-                    parsed = PlannerResponse.model_validate_json(properly_encoded)
-                else:
-                    # Try original format with proper encoding
-                    properly_encoded = json.dumps(raw_json)
-                    parsed = PlannerResponse.model_validate_json(properly_encoded)
-
-            except (json.JSONDecodeError, ValidationError):
-                # If we can't parse as JSON, treat the whole response as an answer
-                answer_data = {"tool_calls": [], "answer": content}
-                properly_encoded = json.dumps(answer_data)
-                parsed = PlannerResponse.model_validate_json(properly_encoded)
+            if s.startswith(prefix):
+                answer_data = {"tool_calls": [], "answer": s[len(prefix) :].strip()}
+                parsed = PlannerResponse.model_validate(answer_data)
+            elif re.match(r'\{\s*(["\'])tool\1\s*:', s):
+                try:
+                    # Attempt to parse as a loose dict with "tool" key
+                    d: Mapping = parse_tool_call(s)
+                except ToolCallParseError as e:
+                    err = f"Failed to parse tool use response: {s}"
+                    err += f"\nError: {e}"
+                    logger.error(err)
+                    return [], err
+                tool_data = {
+                    "tool_calls": [
+                        {
+                            "name": d["tool"],
+                            "args": d.get("args", {}),
+                        }
+                    ],
+                    "answer": None,
+                }
+                parsed = PlannerResponse.model_validate(tool_data)
+            else:
+                # If the response is not in expected format, return it as an answer
+                logger.warning("Unexpected LLM response format: %s", s)
+                return [], s
 
             if parsed.tool_calls:
                 calls = []
@@ -179,6 +178,7 @@ Only one object, no extra text.
                     if "name" in call:
                         calls.append(ToolCall(name=call["name"], args=call.get("args", {})))
                 return calls, None
+
             return [], parsed.answer
 
         except Exception as e:  # pylint: disable=broad-except
@@ -262,45 +262,6 @@ class OpenAIPlanner(BasePlanner):
         except Exception as e:  # pylint: disable=broad-except
             logger.error("OpenAI planner error: %s", str(e))
             return [], f"Error calling OpenAI: {str(e)}"
-
-
-def _sanitize_json_string(content: str) -> str:
-    """Clean up JSON strings returned by LLMs."""
-    # Strip markdown code blocks if present
-    if "```" in content:
-        match = re.search(r"```(?:json)?\s*(.+?)```", content, re.DOTALL)
-        if match:
-            content = match.group(1).strip()
-
-    # Replace semicolons with commas if they appear to be used as separators
-    content = re.sub(r';\s*(["{[])', r",\1", content)
-
-    # Remove trailing semicolons
-    content = re.sub(r";\s*$", "", content, flags=re.MULTILINE)
-
-    # Remove semicolons before closing braces
-    content = re.sub(r";\s*([\]}])", r"\1", content)
-
-    # Find the JSON object boundaries
-    try:
-        # Find the outermost matching braces
-        open_idx = content.find("{")
-        if open_idx >= 0:
-            # Count braces to find the matching closing brace
-            brace_count = 0
-            for i in range(open_idx, len(content)):
-                if content[i] == "{":
-                    brace_count += 1
-                elif content[i] == "}":
-                    brace_count -= 1
-                    if brace_count == 0:
-                        # Extract just the JSON object
-                        content = content[open_idx : i + 1]
-                        break
-    except Exception:  # pylint: disable=broad-except
-        logger.warning("JSON boundary detection failed")
-
-    return content
 
 
 @register_planner("anthropic")

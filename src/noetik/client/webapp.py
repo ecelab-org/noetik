@@ -61,6 +61,8 @@ def create_index_html(path: Path) -> bool:
             margin: 10px 0;
             border-radius: 6px;
             max-width: 80%;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }}
         .user-message {{
             background-color: #ddeeff;
@@ -186,8 +188,7 @@ webapp.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Create the main HTML template if it doesn't exist
 index_template = templates_dir / "index.html"
-if not index_template.exists():
-    create_index_html(path=index_template)
+create_index_html(path=index_template)
 
 
 @webapp.get("/", response_class=HTMLResponse)

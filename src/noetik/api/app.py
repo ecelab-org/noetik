@@ -117,7 +117,9 @@ async def agent_endpoint(req: MessageRequest) -> MessageResponse:
 
     # Add vector search results first, clearly labeled
     if similar_contexts:
-        prompt_parts.append("RELEVANT INFORMATION FROM MEMORY:\n" + "\n\n".join(similar_contexts))
+        prompt_parts.append(
+            "RELEVANT INFORMATION FROM PAST CONVERSATIONS:\n" + "\n\n".join(similar_contexts)
+        )
 
     # Add conversation history in chronological order
     if session_history:
